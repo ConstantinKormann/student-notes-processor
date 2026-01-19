@@ -100,7 +100,7 @@ def extract_text_from_image(image_path: str, api_key: str) -> str:
                     ]
                 }
             ],
-            max_tokens=4096
+            max_tokens=16384
         )
         
         return response.choices[0].message.content
@@ -227,12 +227,16 @@ def create_pdf_document(results: List[Dict[str, str]], output_path: str):
         # Add extracted text
         pdf.set_font('Arial', '', 11)
         
-        # Handle text encoding for PDF
+        # Handle text encoding for PDF - use UTF-8 compatible approach
         text = result['text']
-        # Replace problematic characters
-        text = text.encode('latin-1', 'replace').decode('latin-1')
-        
-        pdf.multi_cell(0, 6, text)
+        # FPDF2 supports UTF-8, so we can use the text directly
+        # Only replace truly problematic characters if any encoding issues occur
+        try:
+            pdf.multi_cell(0, 6, text)
+        except Exception:
+            # Fallback: remove non-ASCII characters only if necessary
+            text = ''.join(char if ord(char) < 128 else '?' for char in text)
+            pdf.multi_cell(0, 6, text)
         pdf.ln(5)
     
     # Save PDF
