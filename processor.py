@@ -46,13 +46,14 @@ def encode_image_to_base64(image_path: str) -> str:
         return base64.b64encode(image_file.read()).decode('utf-8')
 
 
-def extract_text_from_image(image_path: str, api_key: str) -> str:
+def extract_text_from_image(image_path: str, api_key: str, error_callback=None) -> str:
     """
     Call OpenAI Vision API to extract handwritten text from an image.
     
     Args:
         image_path: Path to the image file
         api_key: OpenAI API key
+        error_callback: Optional callback function for errors (receives error message)
         
     Returns:
         Extracted text from the image
@@ -106,17 +107,25 @@ def extract_text_from_image(image_path: str, api_key: str) -> str:
         return response.choices[0].message.content
         
     except Exception as e:
-        print(f"Error processing {image_path}: {str(e)}")
+        error_msg = f"Error processing {Path(image_path).name}: {str(e)}"
+        if error_callback:
+            error_callback(error_msg)
+        else:
+            print(error_msg)
         return f"[Error extracting text from {Path(image_path).name}: {str(e)}]"
 
 
-def process_all_images(input_folder: str, api_key: str) -> List[Dict[str, str]]:
+def process_all_images(input_folder: str, api_key: str, progress_callback=None, 
+                      status_callback=None, cancel_event=None) -> List[Dict[str, str]]:
     """
     Batch process all images in the INPUT folder.
     
     Args:
         input_folder: Path to the INPUT folder
         api_key: OpenAI API key
+        progress_callback: Optional callback(current, total) for progress updates
+        status_callback: Optional callback(message) for status updates
+        cancel_event: Optional threading.Event to check for cancellation
         
     Returns:
         List of dictionaries containing filename and extracted text
@@ -137,11 +146,26 @@ def process_all_images(input_folder: str, api_key: str) -> List[Dict[str, str]]:
     if not image_files:
         raise ValueError(f"No image files found in {input_folder}")
     
-    print(f"Found {len(image_files)} images to process")
+    if status_callback:
+        status_callback(f"Found {len(image_files)} images to process")
+    else:
+        print(f"Found {len(image_files)} images to process")
     
     results = []
     for idx, image_file in enumerate(image_files, 1):
-        print(f"Processing {idx}/{len(image_files)}: {image_file.name}")
+        # Check for cancellation
+        if cancel_event and cancel_event.is_set():
+            if status_callback:
+                status_callback("Processing cancelled by user")
+            raise InterruptedError("Processing cancelled by user")
+        
+        if status_callback:
+            status_callback(f"Processing page {idx}/{len(image_files)}: {image_file.name}")
+        else:
+            print(f"Processing {idx}/{len(image_files)}: {image_file.name}")
+        
+        if progress_callback:
+            progress_callback(idx, len(image_files))
         
         extracted_text = extract_text_from_image(str(image_file), api_key)
         
@@ -154,14 +178,18 @@ def process_all_images(input_folder: str, api_key: str) -> List[Dict[str, str]]:
     return results
 
 
-def create_word_document(results: List[Dict[str, str]], output_path: str):
+def create_word_document(results: List[Dict[str, str]], output_path: str, status_callback=None):
     """
     Generate a Word document from extracted text.
     
     Args:
         results: List of dictionaries with extracted text and metadata
         output_path: Path to save the Word document
+        status_callback: Optional callback(message) for status updates
     """
+    if status_callback:
+        status_callback("Generating Word document...")
+    
     doc = Document()
     
     # Add title
@@ -191,17 +219,25 @@ def create_word_document(results: List[Dict[str, str]], output_path: str):
     
     # Save document
     doc.save(output_path)
-    print(f"Word document saved to: {output_path}")
+    
+    if status_callback:
+        status_callback(f"Word document saved to: {output_path}")
+    else:
+        print(f"Word document saved to: {output_path}")
 
 
-def create_pdf_document(results: List[Dict[str, str]], output_path: str):
+def create_pdf_document(results: List[Dict[str, str]], output_path: str, status_callback=None):
     """
     Generate a PDF document from extracted text.
     
     Args:
         results: List of dictionaries with extracted text and metadata
         output_path: Path to save the PDF document
+        status_callback: Optional callback(message) for status updates
     """
+    if status_callback:
+        status_callback("Generating PDF document...")
+    
     pdf = FPDF()
     pdf.set_auto_page_break(auto=True, margin=15)
     
@@ -241,7 +277,11 @@ def create_pdf_document(results: List[Dict[str, str]], output_path: str):
     
     # Save PDF
     pdf.output(output_path)
-    print(f"PDF document saved to: {output_path}")
+    
+    if status_callback:
+        status_callback(f"PDF document saved to: {output_path}")
+    else:
+        print(f"PDF document saved to: {output_path}")
 
 
 def main():

@@ -32,6 +32,11 @@ share/python-wheels/
 *.egg
 MANIFEST
 
+# PyInstaller artifacts
+*.spec
+build/
+dist/
+
 # Virtual environments
 venv/
 env/
@@ -49,3 +54,6 @@ venv.bak/
 # OS
 .DS_Store
 Thumbs.db
+
+# User config (don't commit API keys)
+config.json
