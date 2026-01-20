@@ -68,6 +68,10 @@ class StudentNotesProcessorGUI:
         main_frame = ttk.Frame(self.root, padding="20")
         main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
         
+        # Configure grid to allow the license label to sit at bottom
+        self.root.grid_rowconfigure(0, weight=1)
+        self.root.grid_columnconfigure(0, weight=1)
+        
         row = 0
         
         # API Key section
@@ -105,6 +109,20 @@ class StudentNotesProcessorGUI:
             text="Remember", 
             variable=self.remember_api_key_var
         ).pack(side=tk.LEFT)
+        
+        row += 1
+        
+        # API key instructions
+        api_instruction_text = "Contact team.learninginnovation@whu.edu for an introduction on how to use this tool and get your API key set up."
+        api_instruction_label = tk.Label(
+            main_frame,
+            text=api_instruction_text,
+            font=('Arial', 8),
+            fg='grey',
+            wraplength=600,
+            justify=tk.LEFT
+        )
+        api_instruction_label.grid(row=row, column=0, columnspan=3, sticky=tk.W, pady=(0, 5))
         
         row += 1
         
@@ -250,6 +268,19 @@ class StudentNotesProcessorGUI:
             width=15
         )
         self.cancel_btn.pack(side=tk.LEFT)
+        
+        # License/copyright text at the bottom of the window
+        license_frame = ttk.Frame(self.root)
+        license_frame.grid(row=1, column=0, sticky=(tk.W, tk.E, tk.S), pady=(0, 5))
+        
+        license_text = "© 2026 Constantin Kormann, WHU Otto Beisheim School of Management. Licensed for in-house academic use only."
+        license_label = tk.Label(
+            license_frame,
+            text=license_text,
+            font=('Arial', 7),
+            fg='grey'
+        )
+        license_label.pack()
     
     def toggle_api_key_visibility(self):
         """Toggle the visibility of the API key."""
