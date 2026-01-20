@@ -18,8 +18,12 @@ def get_config_dir() -> Path:
     """
     if os.name == 'nt':  # Windows
         config_dir = Path(os.getenv('APPDATA', '~')) / 'StudentNotesProcessor'
-    else:  # macOS and Linux
+    elif os.uname().sysname == 'Darwin':  # macOS
         config_dir = Path.home() / 'Library' / 'Application Support' / 'StudentNotesProcessor'
+    else:  # Linux and other Unix-like systems
+        # Follow XDG Base Directory specification
+        xdg_config_home = os.getenv('XDG_CONFIG_HOME', str(Path.home() / '.config'))
+        config_dir = Path(xdg_config_home) / 'StudentNotesProcessor'
     
     # Create directory if it doesn't exist
     config_dir = config_dir.expanduser()

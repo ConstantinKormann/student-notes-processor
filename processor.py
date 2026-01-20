@@ -167,7 +167,16 @@ def process_all_images(input_folder: str, api_key: str, progress_callback=None,
         if progress_callback:
             progress_callback(idx, len(image_files))
         
-        extracted_text = extract_text_from_image(str(image_file), api_key)
+        # Create error callback wrapper if status_callback is provided
+        def error_cb(msg):
+            if status_callback:
+                status_callback(msg)
+        
+        extracted_text = extract_text_from_image(
+            str(image_file), 
+            api_key,
+            error_callback=error_cb if status_callback else None
+        )
         
         results.append({
             'filename': image_file.name,

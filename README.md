@@ -184,7 +184,7 @@ When using the GUI, settings are automatically saved to:
 
 - **Windows**: `%APPDATA%/StudentNotesProcessor/config.json`
 - **macOS**: `~/Library/Application Support/StudentNotesProcessor/config.json`
-- **Linux**: `~/Library/Application Support/StudentNotesProcessor/config.json`
+- **Linux**: `~/.config/StudentNotesProcessor/config.json` (or `$XDG_CONFIG_HOME/StudentNotesProcessor/config.json`)
 
 **Saved Settings:**
 - Last used INPUT folder path
