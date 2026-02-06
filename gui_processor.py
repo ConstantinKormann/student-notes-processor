@@ -237,7 +237,7 @@ class StudentNotesProcessorGUI:
         self.word_checkbox = ttk.Checkbutton(self.format_frame, text="Word Document", variable=self.word_var)
         self.word_checkbox.pack(side=tk.LEFT)
         
-        self.excel_label = ttk.Label(self.format_frame, text="Excel (.xlsx)")
+        self.format_excel_label = ttk.Label(self.format_frame, text="Excel (.xlsx)")
         # Excel label is hidden by default (for notes mode)
         
         row += 1
@@ -349,14 +349,14 @@ class StudentNotesProcessorGUI:
             # Hide PDF/Word checkboxes, show Excel label
             self.pdf_checkbox.pack_forget()
             self.word_checkbox.pack_forget()
-            self.excel_label.pack(side=tk.LEFT, padx=(0, 10))
+            self.format_excel_label.pack(side=tk.LEFT, padx=(0, 10))
         else:
             # Update window title
             self.root.title("📝 Student Notes Processor")
             # Update button text
             self.process_btn.config(text="🚀 Process Notes")
             # Show PDF/Word checkboxes, hide Excel label
-            self.excel_label.pack_forget()
+            self.format_excel_label.pack_forget()
             self.pdf_checkbox.pack(side=tk.LEFT, padx=(0, 10))
             self.word_checkbox.pack(side=tk.LEFT)
     

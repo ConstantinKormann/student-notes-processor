@@ -336,7 +336,6 @@ def create_excel_output(results: List[Dict[str, Any]], output_path: str,
     # Write headers with styling
     for col_idx, header in enumerate(headers, 1):
         cell = ws.cell(row=1, column=col_idx, value=header)
-        cell.font = Font(bold=True, size=12)
         cell.fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
         cell.font = Font(bold=True, color="FFFFFF", size=12)
         cell.alignment = Alignment(horizontal="center", vertical="center")
