@@ -2,10 +2,11 @@
 
 A Python tool that batch processes scanned student notes (handwritten) using OpenAI's GPT-4o Vision API and generates compiled PDF and Word documents.
 
-**Now with a user-friendly GUI!** 🎨
+**Now with Invoice Processing Mode!** 🧾
 
 ## Features
 
+### Student Notes Mode
 - **Graphical User Interface**: Easy-to-use GUI for non-technical users
 - **Batch Processing**: Process multiple scanned images automatically
 - **AI-Powered OCR**: Uses OpenAI's GPT-4o Vision API to extract handwritten text
@@ -13,6 +14,17 @@ A Python tool that batch processes scanned student notes (handwritten) using Ope
 - **Smart Structuring**: Automatically structures questions and answers (Q1:, Q2:, Q3:, etc.)
 - **Page Tracking**: Includes page numbers and source filenames in output
 - **Multiple Formats**: Supports JPG, JPEG, PNG, TIFF, BMP, and GIF images
+
+### Invoice Processing Mode ✨ NEW
+- **Invoice Data Extraction**: Extract structured data from invoice scans (JPG, PNG, PDF)
+- **PDF Support**: Automatically converts PDF invoices to images for processing
+- **Structured Excel Output**: Generate organized spreadsheets with all invoice data
+- **Smart Error Handling**: Continues processing even if some invoices fail
+- **Visual Error Indicators**: Red/yellow highlighting for failed/partial invoices in Excel
+- **Detailed Logging**: Clear warning messages for invoices that need manual review
+- **Extracted Fields**: Invoice number, date, vendor, amounts, currency, tax, due date, line items
+
+### Common Features
 - **Settings Memory**: Remembers your folders and preferences between sessions
 - **Secure API Key Storage**: Optional API key saving with local encryption
 - **Progress Tracking**: Real-time progress bar and status updates
@@ -72,16 +84,65 @@ python gui_processor.py
 1. **API Key**: Enter your OpenAI API key
    - Click the 👁 button to show/hide the key
    - Check "Remember" to save it for next time (stored locally)
-2. **INPUT Folder**: Select the folder containing your scanned images
-3. **OUTPUT Folder**: Select where to save the processed documents
-4. **Output Format**: Choose PDF, Word, or both
-5. **Progress**: Watch real-time progress with page count
+2. **Processing Mode**: Choose between:
+   - 📝 **Student Notes → PDF/Word**: Process handwritten notes into documents
+   - 🧾 **Invoices → Excel**: Extract invoice data into a spreadsheet
+3. **INPUT Folder**: Select the folder containing your scanned images or PDFs
+4. **OUTPUT Folder**: Select where to save the processed documents
+5. **Output Format**: 
+   - For Student Notes mode: Choose PDF, Word, or both
+   - For Invoice mode: Automatically generates Excel (.xlsx)
+6. **Progress**: Watch real-time progress with page count
 6. **Status**: See detailed logs of what's happening
 7. **Cancel**: Stop processing at any time
 
 The GUI will remember your last used folders and preferences between sessions!
 
-### Command Line Interface (Classic)
+### Invoice Processing Mode - Detailed Guide
+
+**When to use Invoice Mode:**
+- Processing scanned invoices from vendors/suppliers
+- Extracting structured data from invoice PDFs
+- Creating organized spreadsheets of invoice information
+- Batch processing multiple invoices at once
+
+**Invoice Mode Workflow:**
+1. Switch to "🧾 Invoices → Excel" mode in the GUI
+2. Place invoice files (JPG, PNG, PDF) in your INPUT folder
+3. Click "🚀 Process Invoices"
+4. The tool will:
+   - Extract invoice data (number, date, vendor, amounts, etc.)
+   - Handle multi-page PDFs automatically
+   - Continue processing even if some invoices fail
+   - Generate a single Excel file with all results
+
+**Excel Output Structure:**
+The generated Excel file includes:
+- **Headers** (blue background): Source File, Invoice Number, Date, Vendor, Total Amount, Currency, Tax Amount, Due Date, Processing Status, Notes
+- **Successful rows** (no highlighting): Invoices processed completely
+- **Partial data rows** (yellow highlighting): Missing some fields, but core data extracted
+- **Error rows** (red highlighting): Could not process the invoice
+
+**Error Handling:**
+- Failed invoices are clearly highlighted in the Excel file
+- The status log shows warning messages for problematic invoices
+- Processing continues even if individual invoices fail
+- At the end, you'll see a summary: "Could not fully process: invoice1.jpg, invoice2.pdf"
+
+**CLI Mode for Invoices:**
+```bash
+# Place invoice files in INPUT folder
+cp ~/invoices/*.pdf INPUT/
+cp ~/invoices/*.jpg INPUT/
+
+# Run the invoice processor
+python invoice_processor.py
+
+# Check output
+ls OUTPUT/invoices_*.xlsx
+```
+
+### Command Line Interface (Classic - Student Notes)
 
 For users who prefer command line or automation:
 
@@ -257,10 +318,19 @@ The processor includes robust error handling:
 
 ## Dependencies
 
+**Core Dependencies:**
 - `openai>=1.0.0` - OpenAI API client
+- `python-dotenv>=1.0.0` - Environment variable management
+
+**Student Notes Mode:**
 - `python-docx>=0.8.11` - Word document generation
 - `fpdf2>=2.7.0` - PDF document generation
-- `python-dotenv>=1.0.0` - Environment variable management
+
+**Invoice Processing Mode:**
+- `openpyxl>=3.0.0` - Excel spreadsheet generation
+- `PyMuPDF>=1.23.0` - PDF to image conversion (no external dependencies required)
+
+**Build/Packaging:**
 - `pyinstaller>=6.0.0` - Executable packaging (for building distributable apps)
 
 **Note:** Tkinter is included with Python, so no separate installation is needed for the GUI.
@@ -269,9 +339,10 @@ The processor includes robust error handling:
 
 ```
 student-notes-processor/
-├── gui_processor.py    # GUI application (main entry point)
-├── processor.py        # Core processing logic
-├── config.py           # Settings and configuration management
+├── gui_processor.py        # GUI application (main entry point)
+├── processor.py            # Student notes processing logic
+├── invoice_processor.py    # Invoice processing logic (NEW)
+├── config.py               # Settings and configuration management
 ├── build_windows.py    # Windows .exe build script
 ├── build_macos.py      # macOS .app build script
 ├── requirements.txt    # Python dependencies
@@ -350,7 +421,18 @@ Contributions are welcome! Please feel free to submit issues or pull requests.
 
 ## Version
 
-Current version: **v2.0.0**
+Current version: **v2.1.0**
+
+**v2.1.0 - Invoice Processing Release**
+- ✨ **NEW: Invoice Processing Mode** - Extract structured data from invoice scans
+- ✨ PDF support for invoices (automatic conversion to images)
+- ✨ Excel spreadsheet output with organized invoice data
+- ✨ Smart error handling with visual indicators (red/yellow highlighting)
+- ✨ Detailed logging for failed invoices
+- ✨ Supports both image scans (JPG, PNG) and PDF files
+- ✨ Mode switcher in GUI (Student Notes ↔ Invoices)
+- 🔧 Added dependencies: `openpyxl` and `PyMuPDF`
+- 📝 Comprehensive documentation for invoice processing
 
 **v2.0.0 - GUI Release**
 - ✨ Added graphical user interface (GUI) using Tkinter
