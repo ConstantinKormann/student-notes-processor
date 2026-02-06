@@ -18,6 +18,11 @@ from processor import (
     create_word_document, 
     create_pdf_document
 )
+from invoice_processor import (
+    process_all_invoices,
+    create_excel_output,
+    log_failed_invoices
+)
 
 
 class StudentNotesProcessorGUI:
@@ -32,12 +37,15 @@ class StudentNotesProcessorGUI:
         """
         self.root = root
         self.root.title("📝 Student Notes Processor")
-        self.root.geometry("700x600")
+        self.root.geometry("700x650")
         self.root.resizable(False, False)
         
         # Processing state
         self.processing = False
         self.cancel_event = threading.Event()
+        
+        # Processing mode (notes or invoices)
+        self.processing_mode = 'notes'  # Default to notes mode
         
         # Load saved settings
         self.load_settings()
@@ -132,6 +140,40 @@ class StudentNotesProcessorGUI:
         )
         row += 1
         
+        # Processing Mode section
+        ttk.Label(main_frame, text="Processing Mode:", font=('Arial', 10, 'bold')).grid(
+            row=row, column=0, sticky=tk.W, pady=(0, 5)
+        )
+        row += 1
+        
+        mode_frame = ttk.Frame(main_frame)
+        mode_frame.grid(row=row, column=0, columnspan=3, sticky=tk.W, pady=(0, 10))
+        
+        self.mode_var = tk.StringVar(value='notes')
+        ttk.Radiobutton(
+            mode_frame, 
+            text="📝 Student Notes → PDF/Word", 
+            variable=self.mode_var, 
+            value='notes',
+            command=self.on_mode_change
+        ).pack(side=tk.LEFT, padx=(0, 20))
+        
+        ttk.Radiobutton(
+            mode_frame, 
+            text="🧾 Invoices → Excel", 
+            variable=self.mode_var, 
+            value='invoices',
+            command=self.on_mode_change
+        ).pack(side=tk.LEFT)
+        
+        row += 1
+        
+        # Separator
+        ttk.Separator(main_frame, orient='horizontal').grid(
+            row=row, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=15
+        )
+        row += 1
+        
         # INPUT folder section
         ttk.Label(main_frame, text="INPUT Folder:", font=('Arial', 10, 'bold')).grid(
             row=row, column=0, sticky=tk.W, pady=(0, 5)
@@ -181,18 +223,22 @@ class StudentNotesProcessorGUI:
         row += 1
         
         # Output format section
-        format_frame = ttk.Frame(main_frame)
-        format_frame.grid(row=row, column=0, columnspan=3, sticky=tk.W, pady=(0, 10))
+        self.format_frame = ttk.Frame(main_frame)
+        self.format_frame.grid(row=row, column=0, columnspan=3, sticky=tk.W, pady=(0, 10))
         
-        ttk.Label(format_frame, text="Output Format:", font=('Arial', 10, 'bold')).pack(
-            side=tk.LEFT, padx=(0, 10)
-        )
+        self.format_label = ttk.Label(self.format_frame, text="Output Format:", font=('Arial', 10, 'bold'))
+        self.format_label.pack(side=tk.LEFT, padx=(0, 10))
         
         self.pdf_var = tk.BooleanVar(value=self.generate_pdf)
-        ttk.Checkbutton(format_frame, text="PDF", variable=self.pdf_var).pack(side=tk.LEFT, padx=(0, 10))
+        self.pdf_checkbox = ttk.Checkbutton(self.format_frame, text="PDF", variable=self.pdf_var)
+        self.pdf_checkbox.pack(side=tk.LEFT, padx=(0, 10))
         
         self.word_var = tk.BooleanVar(value=self.generate_word)
-        ttk.Checkbutton(format_frame, text="Word Document", variable=self.word_var).pack(side=tk.LEFT)
+        self.word_checkbox = ttk.Checkbutton(self.format_frame, text="Word Document", variable=self.word_var)
+        self.word_checkbox.pack(side=tk.LEFT)
+        
+        self.excel_label = ttk.Label(self.format_frame, text="Excel (.xlsx)")
+        # Excel label is hidden by default (for notes mode)
         
         row += 1
         
@@ -290,6 +336,30 @@ class StudentNotesProcessorGUI:
         else:
             self.api_key_entry.config(show="•")
     
+    def on_mode_change(self):
+        """Handle processing mode change."""
+        mode = self.mode_var.get()
+        self.processing_mode = mode
+        
+        if mode == 'invoices':
+            # Update window title
+            self.root.title("🧾 Invoice Processor")
+            # Update button text
+            self.process_btn.config(text="🚀 Process Invoices")
+            # Hide PDF/Word checkboxes, show Excel label
+            self.pdf_checkbox.pack_forget()
+            self.word_checkbox.pack_forget()
+            self.excel_label.pack(side=tk.LEFT, padx=(0, 10))
+        else:
+            # Update window title
+            self.root.title("📝 Student Notes Processor")
+            # Update button text
+            self.process_btn.config(text="🚀 Process Notes")
+            # Show PDF/Word checkboxes, hide Excel label
+            self.excel_label.pack_forget()
+            self.pdf_checkbox.pack(side=tk.LEFT, padx=(0, 10))
+            self.word_checkbox.pack(side=tk.LEFT)
+    
     def browse_input_folder(self):
         """Open folder browser for INPUT folder."""
         folder = filedialog.askdirectory(
@@ -358,9 +428,11 @@ class StudentNotesProcessorGUI:
             messagebox.showerror("Error", "Please select an OUTPUT folder.")
             return False
         
-        if not self.pdf_var.get() and not self.word_var.get():
-            messagebox.showerror("Error", "Please select at least one output format (PDF or Word).")
-            return False
+        # Only validate format selection for notes mode
+        if self.processing_mode == 'notes':
+            if not self.pdf_var.get() and not self.word_var.get():
+                messagebox.showerror("Error", "Please select at least one output format (PDF or Word).")
+                return False
         
         return True
     
@@ -403,7 +475,10 @@ class StudentNotesProcessorGUI:
         self.cancel_btn.config(state=tk.NORMAL)
         
         # Start processing thread
-        thread = threading.Thread(target=self.process_notes, daemon=True)
+        if self.processing_mode == 'invoices':
+            thread = threading.Thread(target=self.process_invoices, daemon=True)
+        else:
+            thread = threading.Thread(target=self.process_notes, daemon=True)
         thread.start()
     
     def cancel_processing(self):
@@ -460,6 +535,81 @@ class StudentNotesProcessorGUI:
             
             # Show success dialog
             self.root.after(0, self.show_success_dialog, output_folder, output_files)
+            
+        except InterruptedError as e:
+            self.log_status(f"\n{str(e)}")
+            self.root.after(0, messagebox.showwarning, "Cancelled", "Processing was cancelled.")
+            
+        except FileNotFoundError as e:
+            self.log_status(f"\nError: {str(e)}")
+            self.root.after(0, messagebox.showerror, "Error", str(e))
+            
+        except ValueError as e:
+            self.log_status(f"\nError: {str(e)}")
+            self.root.after(0, messagebox.showerror, "Error", str(e))
+            
+        except Exception as e:
+            error_msg = f"An error occurred:\n{str(e)}"
+            self.log_status(f"\nError: {str(e)}")
+            self.root.after(0, messagebox.showerror, "Error", error_msg)
+            
+        finally:
+            # Reset UI state
+            self.processing = False
+            self.root.after(0, self.reset_ui_after_processing)
+    
+    def process_invoices(self):
+        """Process invoices in background thread."""
+        try:
+            api_key = self.api_key_var.get().strip()
+            input_folder = self.input_folder_var.get().strip()
+            output_folder = self.output_folder_var.get().strip()
+            
+            self.log_status("=" * 60)
+            self.log_status("Starting Invoice Processing...")
+            self.log_status("=" * 60)
+            
+            # Process all invoices
+            self.log_status("\nStep 1: Processing invoices from INPUT folder...")
+            results = process_all_invoices(
+                input_folder,
+                api_key,
+                progress_callback=self.update_progress,
+                status_callback=self.log_status,
+                cancel_event=self.cancel_event
+            )
+            
+            self.log_status(f"\nProcessed {len(results)} invoice files")
+            
+            # Generate timestamp for filename
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            
+            # Create Excel spreadsheet
+            self.log_status("\nStep 2: Generating Excel spreadsheet...")
+            excel_path = Path(output_folder) / f'invoices_{timestamp}.xlsx'
+            failed_invoices = create_excel_output(
+                results, 
+                str(excel_path), 
+                status_callback=self.log_status
+            )
+            
+            # Log failed invoices with warnings
+            if failed_invoices:
+                warning_msg = f"⚠️  Could not fully process the following invoices: {', '.join(failed_invoices)}"
+                self.log_status("\n" + "=" * 60)
+                self.log_status("WARNING")
+                self.log_status("=" * 60)
+                self.log_status(warning_msg)
+                log_failed_invoices(failed_invoices)
+            else:
+                self.log_status("\n✅ All invoices processed successfully!")
+            
+            self.log_status("\n" + "=" * 60)
+            self.log_status("Processing complete!")
+            self.log_status("=" * 60)
+            
+            # Show success dialog
+            self.root.after(0, self.show_success_dialog, output_folder, [str(excel_path)])
             
         except InterruptedError as e:
             self.log_status(f"\n{str(e)}")
